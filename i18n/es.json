@@ -1,0 +1,9 @@
+{
+  "panel.title": "Cursor",
+  "panel.search": "Buscar temas de cursor…",
+  "panel.count": { "one": "%1 tema de cursor", "other": "%1 temas de cursor" },
+  "panel.none": "No se encontraron temas de cursor",
+  "panel.size": "Tamaño",
+  "panel.current": "En uso",
+  "panel.noPreview": "Sin vista previa"
+}

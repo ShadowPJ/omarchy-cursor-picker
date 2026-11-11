@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "shadowpj.cursorpicker",
+  "name": "Cursor Picker",
+  "version": "0.1.0",
+  "author": "ShadowPJ",
+  "license": "MIT",
+  "description": "Pick the mouse cursor theme and size from the cursor themes you have installed, and apply it instantly",
+  "keywords": [
+    "cursor",
+    "theme",
+    "pointer",
+    "appearance",
+    "service"
+  ],
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "CursorPicker.qml",
+    "barWidget": "CursorWidget.qml"
+  },
+  "homepage": "https://github.com/ShadowPJ/omarchy-cursor-picker",
+  "repository": "https://github.com/ShadowPJ/omarchy-cursor-picker.git",
+  "barWidget": {
+    "displayName": "Cursor Picker",
+    "description": "Pick the mouse cursor theme and size",
+    "category": "Appearance",
+    "allowMultiple": false
+  }
+}
