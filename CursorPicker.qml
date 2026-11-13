@@ -89,7 +89,21 @@ Item {
   // ---- Importing themes from downloaded archives (see import.sh) -----------
   readonly property string importScript: localPath(Qt.resolvedUrl("import.sh"))
   readonly property string iconsDir: home + "/.icons"
-  readonly property string downloadsDir: Quickshell.env("XDG_DOWNLOAD_DIR") || (home + "/Downloads")
+  // The user's real Downloads folder (it may be "Descargas", say): asked from
+  // xdg-user-dir at startup, with ~/Downloads as the fallback.
+  property string downloadsDir: Quickshell.env("XDG_DOWNLOAD_DIR") || (home + "/Downloads")
+
+  Process {
+    id: downloadsProc
+    command: ["xdg-user-dir", "DOWNLOAD"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var dir = String(text).trim()
+        if (dir && dir.charAt(0) === "/" && dir !== root.home) root.downloadsDir = dir
+      }
+    }
+  }
 
   property var archives: []
   property bool archivesScanned: false
@@ -110,6 +124,8 @@ Item {
   Process {
     id: installProc
     property string archive: ""
+    // Never leave the panel stuck on "Installing…", whatever happened to the process.
+    onExited: root.importBusy = false
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
@@ -121,6 +137,10 @@ Item {
         if (result.installed.length > 0) root.rescan()
       }
     }
+  }
+
+  function clearImportResult() {
+    root.importResult = { archive: "", installed: [], skipped: [], error: "" }
   }
 
   function scanArchives() {
@@ -144,6 +164,7 @@ Item {
   function rescan() { scanProc.running = false; scanProc.running = true }
 
   Component.onCompleted: {
+    downloadsProc.running = true
     currentProc.running = true
     rescan()
   }

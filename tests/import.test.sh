@@ -92,12 +92,12 @@ check "install: replace leaves no old copy" test "$(ls -A "$dest")" = "Good"
 
 # Hostile or broken archives.
 hs="$work/hostile"; mkdir -p "$hs"
-tar -cf "$hs/dotdot.tar" --transform 's,^,../,' -C "$src/a" Good
-tar -cPf "$hs/abs.tar" "$src/a/Good"
+tar -czf "$hs/dotdot.tar.gz" --transform 's,^,../,' -C "$src/a" Good
+tar -czPf "$hs/abs.tar.gz" "$src/a/Good"
 mktheme "$hs/l" Good/cursors/x; ln -s /etc "$hs/l/Good/cursors/out"
-bsdtar -cf "$hs/symlink.tar" -C "$hs/l" Good
+bsdtar -czf "$hs/symlink.tar.gz" -C "$hs/l" Good
 mktheme "$hs/f" Good/cursors/x; mkfifo "$hs/f/Good/cursors/pipe"
-bsdtar -cf "$hs/fifo.tar" -C "$hs/f" Good
+bsdtar -czf "$hs/fifo.tar.gz" -C "$hs/f" Good
 mktheme "$hs/r" Good/cursors/arrow; ln -s arrow "$hs/r/Good/cursors/left_ptr"
 bsdtar -czf "$hs/relative.tar.gz" -C "$hs/r" Good
 mktheme "$hs/z" Good/cursors/x; head -c 52428801 /dev/zero > "$hs/z/Good/cursors/big"
@@ -109,10 +109,10 @@ head -c 100 "$dl/Good.tar.gz" > "$hs/truncated.tar.gz"
 mktheme "$hs/n" 'bad;name/cursors/x'
 bsdtar -czf "$hs/badname.tar.gz" -C "$hs/n" 'bad;name'
 
-check "install: rejects a ../ entry" code_is "$hs/dotdot.tar" unsafe
-check "install: rejects an absolute entry" code_is "$hs/abs.tar" unsafe
-check "install: rejects a link leaving the theme" code_is "$hs/symlink.tar" unsafe
-check "install: rejects a FIFO" code_is "$hs/fifo.tar" unsafe
+check "install: rejects a ../ entry" code_is "$hs/dotdot.tar.gz" unsafe
+check "install: rejects an absolute entry" code_is "$hs/abs.tar.gz" unsafe
+check "install: rejects a link leaving the theme" code_is "$hs/symlink.tar.gz" unsafe
+check "install: rejects a FIFO" code_is "$hs/fifo.tar.gz" unsafe
 check "install: rejects a huge unpacked size" code_is "$hs/bomb.tar.gz" too-big
 check "install: rejects too many files" code_is "$hs/many.tar.gz" too-big
 check "install: reports a truncated archive" code_is "$hs/truncated.tar.gz" unreadable
@@ -121,5 +121,56 @@ check "install: rejects a bad theme folder name" code_is "$hs/badname.tar.gz" un
 fresh
 out=$(install "$hs/relative.tar.gz")
 check "install: accepts a relative link inside a theme" test "$out" = "installed	Good"
+
+# ---- review fixes ----------------------------------------------------------
+rv="$work/review"; mkdir -p "$rv"
+
+# Links must stay inside their own theme once installed, not just inside the temp folder.
+mktheme "$rv/w" w/Good/cursors/x; ln -s ../../../victim/key "$rv/w/w/Good/cursors/esc"
+bsdtar -czf "$rv/escape-wrapped.tar.gz" -C "$rv/w" w
+mktheme "$rv/u" Good/cursors/x; mktheme "$rv/u" Other/cursors/x; ln -s ../../Other/cursors/x "$rv/u/Good/cursors/esc"
+bsdtar -czf "$rv/escape-sibling.tar.gz" -C "$rv/u" Good Other
+check "install: rejects a link that escapes its theme (wrapped)" code_is "$rv/escape-wrapped.tar.gz" unsafe
+check "install: rejects a link into a sibling theme" code_is "$rv/escape-sibling.tar.gz" unsafe
+
+# A size header that lies (owner name with a space) must not let a big archive through.
+mkdir -p "$rv/lie/Good/cursors"
+for k in 1 2 3; do head -c 41943040 /dev/zero > "$rv/lie/Good/cursors/b$k"; done
+tar --owner='a b' --group='c d' -cJf "$rv/lie.tar.xz" -C "$rv/lie" Good
+check "install: rejects an archive whose size headers lie" code_is "$rv/lie.tar.xz" too-big
+
+# Very deep folders create thousands of inodes from a few entries.
+deep=$(printf 'd/%.0s' $(seq 1 1900)); mkdir -p "$rv/dp/Good/cursors/$deep"; : > "$rv/dp/Good/cursors/${deep}f"
+bsdtar -czf "$rv/deep.tar.gz" -C "$rv/dp" Good
+check "install: rejects absurdly deep paths" code_is "$rv/deep.tar.gz" unsafe
+
+# A theme folder inside another theme is not a second theme.
+mktheme "$rv/nest" A/cursors/x; mktheme "$rv/nest" A/B/cursors/y
+bsdtar -czf "$rv/nested.tar.gz" -C "$rv/nest" A
+fresh; out=$(install "$rv/nested.tar.gz")
+check "install: nested theme folders install only the outer theme" test "$out" = "installed	A"
+check "install: the inner folder stays inside the outer theme" test -f "$dest/A/B/cursors/y"
+
+# install enforces the archive size and extension, not only list.
+check "install: rejects an archive over 50 MB" code_is "$dl/big.tar.gz" too-big
+check "install: rejects a non-archive extension" code_is "$dl/notes.txt" unreadable
+
+# Odd names, other formats, empty and corrupt folders.
+od="$rv/odd"; mkdir -p "$od"; mktheme "$rv/o" Odd/cursors/x
+bsdtar -czf "$od/it's \"q\" \$(id) *.tar.gz" -C "$rv/o" Odd
+bsdtar -c --format 7zip -f "$od/-rf ñandú.(ES).[x].7z" -C "$rv/o" Odd
+bsdtar --zstd -cf "$od/z.tar.zst" -C "$rv/o" Odd
+bsdtar -cjf "$od/b.tar.bz2" -C "$rv/o" Odd
+bsdtar -a -cf "$od/z.zip" -C "$rv/o" Odd
+listed=$(bash "$script" list "$od")
+check "list: finds every format and odd name" test "$(printf '%s\n' "$listed" | grep -c .)" = 5
+for f in "it's \"q\" \$(id) *.tar.gz" "-rf ñandú.(ES).[x].7z" z.tar.zst b.tar.bz2 z.zip; do
+  fresh; out=$(install "$od/$f")
+  check "install: $f" test "$out" = "installed	Odd"
+done
+mkdir -p "$rv/empty"
+check "list: an empty folder prints nothing" test -z "$(bash "$script" list "$rv/empty")"
+mkdir -p "$rv/corrupt"; head -c 100 "$dl/Good.tar.gz" > "$rv/corrupt/c.tar.gz"
+check "list: a corrupt archive is skipped without failing" test -z "$(bash "$script" list "$rv/corrupt")"
 
 [ "$fails" -eq 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }

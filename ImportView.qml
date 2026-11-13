@@ -21,6 +21,7 @@ FocusScope {
 
   onVisibleChanged: {
     if (!visible || !picker) return
+    picker.clearImportResult()
     picker.scanArchives()
     view.forceActiveFocus()
   }
