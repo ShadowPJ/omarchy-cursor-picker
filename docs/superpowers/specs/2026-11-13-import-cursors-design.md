@@ -13,7 +13,8 @@ it so it shows up in the panel.
 
 - An **Import** button in the panel lists archives in `~/Downloads` that contain
   a cursor theme; picking one installs it and refreshes the theme list.
-- The same from a script: `omarchy-shell shadowpj.cursorpicker import <archive>`.
+- The same from a script: `omarchy-shell shadowpj.cursorpicker importArchive <archive>` (`import` is a
+  reserved word in QML, so the IPC method cannot use it).
 - Formats: `.tar.gz/.tgz`, `.tar.xz`, `.tar.bz2`, `.tar.zst`, `.zip`, `.7z`,
   read with `bsdtar` (already installed; no new dependency).
 - An archive with several themes installs all of them.
@@ -44,7 +45,7 @@ the user knowing, or hang the panel while it inspects big files.
 ## Decisions (my calls, open to correction)
 
 - **Where to look:** `~/Downloads` (XDG download dir), plus any path given to the
-  `import` command.
+  `importArchive` command.
 - **Which archives are offered:** known extensions only, up to 50 MB, listed with
   `bsdtar -tf` (no extraction); offered only if the listing has a `cursors/`
   folder one or two levels deep. The owner's Downloads mixes games and a
