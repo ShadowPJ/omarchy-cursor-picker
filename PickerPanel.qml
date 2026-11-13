@@ -24,8 +24,11 @@ OverlayWindow {
   readonly property int cellWidth: Math.round(150 * Style.fontScale)
   readonly property int cellHeight: Math.round(120 * Style.fontScale)
 
+  property bool importOpen: false
+
   onShownChanged: {
     if (!shown) return
+    window.importOpen = false
     window.query = ""
     search.text = ""
     Qt.callLater(function() { search.forceActiveFocus() })
@@ -88,19 +91,41 @@ OverlayWindow {
       }
     }
 
+    ImportView {
+      id: importView
+      visible: window.importOpen
+      x: window.pad
+      y: title.y + title.height + window.pad
+      width: card.width - window.pad * 2
+      height: sizeRow.y - Style.spacing.md - y
+      picker: window.picker
+      onClosed: {
+        window.importOpen = false
+        Qt.callLater(function() { search.forceActiveFocus() })
+      }
+    }
+
     TextField {
       id: search
+      visible: !window.importOpen
       x: window.pad
       y: title.y + title.height + window.pad
       width: card.width - window.pad * 2
       placeholderText: strings.t("panel.search")
       onTextChanged: window.query = text
       Keys.onEscapePressed: window.close()
+      Keys.onPressed: function(event) {
+        if ((event.modifiers & Qt.ControlModifier) && event.key === Qt.Key_I) {
+          window.importOpen = true
+          event.accepted = true
+        }
+      }
       onAccepted: if (window.results.length > 0) window.picker.select(window.results[0].id)
     }
 
     Rectangle {
       id: gridBox
+      visible: !window.importOpen
       x: window.pad
       y: search.y + search.height + Style.spacing.md
       width: card.width - window.pad * 2
@@ -238,6 +263,16 @@ OverlayWindow {
         enabled: window.picker && window.picker.size < CursorModel.MAX_SIZE
         onClicked: window.picker.setSize(window.picker.size + CursorModel.SIZE_STEP)
       }
+    }
+
+    TextButton {
+      visible: !window.importOpen
+      anchors.right: parent.right
+      anchors.rightMargin: window.pad
+      y: sizeRow.y
+      height: sizeRow.height
+      label: strings.t("import.button")
+      onClicked: window.importOpen = true
     }
   }
 

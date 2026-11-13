@@ -1,9 +1,31 @@
 {
   "panel.title": "Cursor",
   "panel.search": "Search cursor themes…",
-  "panel.count": { "one": "%1 cursor theme", "other": "%1 cursor themes" },
+  "panel.count": {
+    "one": "%1 cursor theme",
+    "other": "%1 cursor themes"
+  },
   "panel.none": "No cursor themes found",
   "panel.size": "Size",
   "panel.current": "In use",
-  "panel.noPreview": "No preview"
+  "panel.noPreview": "No preview",
+  "import.button": "Import…",
+  "import.title": "Import a cursor theme",
+  "import.back": "Back",
+  "import.empty": "No cursor archives found in Downloads. Download a cursor theme (.tar.gz, .zip, .7z…) and it will show up here.",
+  "import.busy": "Installing…",
+  "import.installed": {
+    "one": "%1 theme installed",
+    "other": "%1 themes installed"
+  },
+  "import.skipped": {
+    "one": "%1 already installed",
+    "other": "%1 already installed"
+  },
+  "import.replace": "Replace",
+  "import.error.unreadable": "The archive could not be read.",
+  "import.error.unsafe": "The archive contains unsafe files and was not installed.",
+  "import.error.too-big": "The archive is too big to import safely.",
+  "import.error.no-cursors": "No cursor theme was found in the archive.",
+  "import.error.failed": "The import failed."
 }

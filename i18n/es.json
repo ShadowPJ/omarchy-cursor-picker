@@ -1,9 +1,31 @@
 {
   "panel.title": "Cursor",
   "panel.search": "Buscar temas de cursor…",
-  "panel.count": { "one": "%1 tema de cursor", "other": "%1 temas de cursor" },
+  "panel.count": {
+    "one": "%1 tema de cursor",
+    "other": "%1 temas de cursor"
+  },
   "panel.none": "No se encontraron temas de cursor",
   "panel.size": "Tamaño",
   "panel.current": "En uso",
-  "panel.noPreview": "Sin vista previa"
+  "panel.noPreview": "Sin vista previa",
+  "import.button": "Importar…",
+  "import.title": "Importar un tema de cursor",
+  "import.back": "Atrás",
+  "import.empty": "No hay archivos de cursores en Descargas. Descarga un tema de cursor (.tar.gz, .zip, .7z…) y aparecerá aquí.",
+  "import.busy": "Instalando…",
+  "import.installed": {
+    "one": "%1 tema instalado",
+    "other": "%1 temas instalados"
+  },
+  "import.skipped": {
+    "one": "%1 ya instalado",
+    "other": "%1 ya instalados"
+  },
+  "import.replace": "Reemplazar",
+  "import.error.unreadable": "No se pudo leer el archivo.",
+  "import.error.unsafe": "El archivo contiene ficheros inseguros y no se instaló.",
+  "import.error.too-big": "El archivo es demasiado grande para importarlo con seguridad.",
+  "import.error.no-cursors": "No se encontró ningún tema de cursor en el archivo.",
+  "import.error.failed": "La importación falló."
 }

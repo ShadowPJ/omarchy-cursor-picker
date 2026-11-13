@@ -28,3 +28,10 @@ test("parseInstallResult", () => {
   assert.equal(M.parseInstallResult("error\ttoo-big\n").error, "too-big")
   assert.equal(M.parseInstallResult("garbage").error, "")
 })
+
+test("formatBytes", () => {
+  assert.equal(M.formatBytes(10), "10 B")
+  assert.equal(M.formatBytes(226900), "222 KB")
+  assert.equal(M.formatBytes(4785772), "4.6 MB")
+  assert.equal(M.formatBytes(-1), "0 B")
+})

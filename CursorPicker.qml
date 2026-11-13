@@ -86,6 +86,61 @@ Item {
 
   Process { id: applyProc }
 
+  // ---- Importing themes from downloaded archives (see import.sh) -----------
+  readonly property string importScript: localPath(Qt.resolvedUrl("import.sh"))
+  readonly property string iconsDir: home + "/.icons"
+  readonly property string downloadsDir: Quickshell.env("XDG_DOWNLOAD_DIR") || (home + "/Downloads")
+
+  property var archives: []
+  property bool archivesScanned: false
+  property bool importBusy: false
+  property var importResult: ({ archive: "", installed: [], skipped: [], error: "" })
+
+  Process {
+    id: listProc
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        root.archives = CursorModel.parseArchives(text)
+        root.archivesScanned = true
+      }
+    }
+  }
+
+  Process {
+    id: installProc
+    property string archive: ""
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var result = CursorModel.parseInstallResult(text)
+        if (!result.error && result.installed.length === 0 && result.skipped.length === 0) result.error = "failed"
+        result.archive = installProc.archive
+        root.importResult = result
+        root.importBusy = false
+        if (result.installed.length > 0) root.rescan()
+      }
+    }
+  }
+
+  function scanArchives() {
+    listProc.running = false
+    listProc.command = ["bash", root.importScript, "list", root.downloadsDir]
+    listProc.running = true
+  }
+
+  // mode "skip" keeps a theme that is already installed; "replace" overwrites it.
+  function importArchive(path, mode) {
+    if (!path || root.importBusy) return false
+    root.importBusy = true
+    root.importResult = { archive: "", installed: [], skipped: [], error: "" }
+    installProc.archive = String(path)
+    installProc.command = ["bash", root.importScript, "install", String(path), root.iconsDir,
+                           root.cacheDir, mode === "replace" ? "replace" : "skip"]
+    installProc.running = true
+    return true
+  }
+
   function rescan() { scanProc.running = false; scanProc.running = true }
 
   Component.onCompleted: {
@@ -142,12 +197,14 @@ Item {
   //   omarchy-shell shadowpj.cursorpicker set <theme>  applies a theme by id
   //   omarchy-shell shadowpj.cursorpicker size <px>    changes the size
   //   omarchy-shell shadowpj.cursorpicker refresh      rescans installed themes
+  //   omarchy-shell shadowpj.cursorpicker importArchive <file>  installs themes from an archive
   ShellIpc {
     target: "shadowpj.cursorpicker"
     function panel(): void { root.togglePanel() }
     function set(theme: string): void { root.select(theme) }
     function size(px: int): void { root.setSize(px) }
     function refresh(): void { root.rescan() }
+    function importArchive(path: string): void { root.importArchive(path, "skip") }
   }
 
   PickerPanel {

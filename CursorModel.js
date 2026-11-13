@@ -107,3 +107,12 @@ function parseInstallResult(text) {
   }
   return result
 }
+
+// "10 B", "222 KB", "4.6 MB": sizes as shown in the import list.
+function formatBytes(bytes) {
+  var n = Number(bytes)
+  if (!isFinite(n) || n < 0) n = 0
+  if (n < 1024) return Math.round(n) + " B"
+  if (n < 1048576) return Math.round(n / 1024) + " KB"
+  return (n / 1048576).toFixed(1) + " MB"
+}
