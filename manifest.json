@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "shadowpj.cursorpicker",
   "name": "Cursor Picker",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "ShadowPJ",
   "license": "MIT",
   "description": "Pick the mouse cursor theme and size from the cursor themes you have installed, and apply it instantly",
