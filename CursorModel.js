@@ -69,3 +69,41 @@ function filter(themes, query) {
     return t.name.toLowerCase().indexOf(needle) >= 0 || t.id.toLowerCase().indexOf(needle) >= 0
   })
 }
+
+// ---- Importing themes from archives ---------------------------------------
+
+var MAX_ARCHIVE_BYTES = 52428800
+var MAX_UNPACKED_BYTES = 52428800
+var MAX_FILES = 2000
+
+// Parses `import.sh list`: one "path<TAB>bytes<TAB>theme1,theme2" per line.
+// Rows that are malformed, or whose themes are all invalid, are dropped.
+function parseArchives(text) {
+  var out = []
+  var lines = String(text || "").split("\n")
+  for (var i = 0; i < lines.length; i++) {
+    var parts = lines[i].split("\t")
+    if (parts.length !== 3 || !parts[0]) continue
+    var size = Number(parts[1])
+    if (!isFinite(size) || size < 0) continue
+    var themes = parts[2].split(",").filter(validId)
+    if (themes.length === 0) continue
+    out.push({ path: parts[0], name: parts[0].replace(/^.*\//, ""), size: size, themes: themes })
+  }
+  return out
+}
+
+// Parses `import.sh install`: "installed<TAB>name", "skipped<TAB>name" and
+// "error<TAB>code" lines (codes: unreadable, unsafe, too-big, no-cursors, failed).
+function parseInstallResult(text) {
+  var result = { installed: [], skipped: [], error: "" }
+  var lines = String(text || "").split("\n")
+  for (var i = 0; i < lines.length; i++) {
+    var parts = lines[i].split("\t")
+    if (parts.length < 2) continue
+    if (parts[0] === "installed") result.installed.push(parts[1])
+    else if (parts[0] === "skipped") result.skipped.push(parts[1])
+    else if (parts[0] === "error") result.error = parts[1]
+  }
+  return result
+}
