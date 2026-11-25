@@ -204,7 +204,7 @@ FCODE=not-archive;      check "fetch: rejects a URL whose name is not an archive
 FCODE=download-failed;  check "fetch: a 404 is download-failed" fcode_is "$base/missing.tar.gz"
 FCODE=too-big;          check "fetch: rejects a download over 50 MB" fcode_is "$base/huge.tar.gz"
 FCODE=bad-url
-for u in "ftp://example.com/a.tar.gz" "https://user:pw@example.com/a.tar.gz" "https://example.com/a b.tar.gz" \
+for u in "$base/Net.tar.gz?a={1,2,3}" "$base/Net.tar.gz?a=[1-4]" "https://{a,b}.example.com/x.tar.gz" "ftp://example.com/a.tar.gz" "https://user:pw@example.com/a.tar.gz" "https://example.com/a b.tar.gz" \
          "https:///a.tar.gz" "$(printf 'https://example.com/a\n.tar.gz')" "-o/etc/x" "file:///etc/passwd" \
          "https://example.com/$(head -c 3000 /dev/zero | tr '\0' a).tar.gz"; do
   fresh; out=$(bash "$script" fetch "$u" - "$dest" "$cache" skip)
@@ -213,6 +213,9 @@ done
 fresh; out=$(bash "$script" fetch "http://127.0.0.1:1/a.tar.gz" - "$dest" "$cache" skip)
 check "fetch: plain http is rejected without the test switch" test "$out" = "error	bad-url"
 fresh; out=$(fetch "$base/Net.tar.gz" "../evil.tar.gz")
+check "fetch: a glob URL sent no request" test -z "$(ls "$cache")"
+check "resolve: the API base override is ignored without the test switch" \
+  test "$(CURSOR_PICKER_API_BASE="$base" bash "$script" resolve https://www.gnome-look.org/p/111 2>/dev/null | grep -c Net.tar.gz)" = 0
 check "fetch: a name with a slash is rejected" test "$out" = "error	bad-url"
 check "fetch: nothing was written outside the cache" test ! -e "$dest/../evil.tar.gz"
 
@@ -223,6 +226,7 @@ api 111 "{\"data\":[{\"downloadname1\":\"Info\",\"downloadsize1\":\"1\",\"downlo
  \"downloadname3\":\"Net.tar.gz\",\"downloadsize3\":\"2\",\"downloadlink3\":\"$base/Net.tar.gz\",
  \"downloadname4\":\"Big.tar.xz\",\"downloadsize4\":\"60000\",\"downloadlink4\":\"$base/Net.tar.gz\",
  \"downloadname5\":\"Evil.tar.gz\",\"downloadsize5\":\"2\",\"downloadlink5\":\"https://evil.example.com/x.tar.gz\",
+ \"downloadname7\":\"Glob.tar.gz\",\"downloadsize7\":\"2\",\"downloadlink7\":\"$base/Net.tar.gz?a=[1-9]\",
  \"downloadname6\":\"../up.tar.gz\",\"downloadsize6\":\"2\",\"downloadlink6\":\"$base/Net.tar.gz\"}]}"
 api 222 '{"data":[{"downloadname1":"Readme.txt","downloadsize1":"1","downloadlink1":"x"}]}'
 api 333 'this is not json'

@@ -69,7 +69,7 @@ link). A page can hold several files (variants, a Windows `.zip`, plain "link" e
   on the file and prints the same `installed|skipped<TAB>name` / `error<TAB>code` lines.
 - URL rules, checked before any request: `https://` only, at most 2048 chars,
   no whitespace or control characters, no `user@` credentials. The file name is taken
-  from the final URL path (query removed) and must end in a supported archive extension.
+  from the URL as pasted, before redirects (query removed) and must end in a supported archive extension.
 - `curl -q` (ignores config files) with `--proto '=https' --proto-redir '=https'
   --max-redirs 5 --connect-timeout 15 --max-time 120`, output into a fresh
   `mktemp -d` under the cache folder, and `ulimit -f` so a response without a
@@ -89,3 +89,11 @@ link). A page can hold several files (variants, a Windows `.zip`, plain "link" e
 Exact message wording in English and Spanish, field styling, and test fixtures.
 Nothing is pushed: the marketplace listing is verified at `2a42884`, and publishing
 `0.3.0` is a separate decision (it adds network access and needs new verification).
+
+## Changes after the independent review (2026-11-25)
+
+- `curl` runs with `--globoff` and `valid_url` rejects `{}[]\`, since glob patterns
+  made one paste fire several requests and defeated the 120 s limit.
+- Enter in the link field is handled and accepted there; a rejected "busy" request
+  only reports and never clears the flag of the import in flight.
+- `CURSOR_PICKER_API_BASE` is honoured only together with `CURSOR_PICKER_ALLOW_HTTP`.

@@ -53,3 +53,14 @@ test("parseCandidates", () => {
   assert.equal(M.parseCandidates("error\tbad-url\n").error, "bad-url")
   assert.equal(M.parseCandidates("").error, "no-download")
 })
+
+test("every code import.sh can print has a message in both languages", () => {
+  const fs = require("node:fs"), path = require("node:path")
+  const root = path.join(__dirname, "..")
+  const codes = new Set(["busy"])
+  for (const m of fs.readFileSync(path.join(root, "import.sh"), "utf8").matchAll(/(?<![-\w])fail ([a-z][a-z-]*)/g)) codes.add(m[1])
+  for (const lang of ["en", "es"]) {
+    const strings = JSON.parse(fs.readFileSync(path.join(root, "i18n", lang + ".json"), "utf8"))
+    for (const code of codes) assert.ok(strings["import.error." + code], lang + " lacks import.error." + code)
+  }
+})

@@ -186,8 +186,13 @@ Item {
     listProc.running = true
   }
 
+  // A rejected request must not touch importBusy: the import in flight still owns it.
+  function reportBusy(source) {
+    root.importResult = { archive: source, installed: [], skipped: [], error: "busy" }
+  }
+
   function beginImport(source) {
-    if (root.importBusy) { root.finishWith(source, "busy"); return false }
+    if (root.importBusy) { root.reportBusy(source); return false }
     root.importBusy = true
     root.candidates = []
     root.importResult = { archive: "", installed: [], skipped: [], error: "" }
@@ -229,7 +234,7 @@ Item {
   }
 
   function downloadCandidate(candidate, mode) {
-    if (root.importBusy) { root.finishWith(candidate.name, "busy"); return false }
+    if (root.importBusy) { root.reportBusy(candidate.name); return false }
     root.importBusy = true
     root.candidates = []
     root.importResult = { archive: "", installed: [], skipped: [], error: "" }

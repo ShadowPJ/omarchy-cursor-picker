@@ -87,12 +87,14 @@ The download goes through exactly the same checks as a file from Downloads.
 #### Network
 
 This is the only part of the plugin that uses the network, and only when you paste a
-link. It talks to the host in your link and, for gnome-look pages, to
-`api.opendesktop.org` plus the store's `files*.pling.com` / `dl.opendesktop.org`
-download hosts. Only `https` links are accepted (also after redirects), links with a
-`user@` login are refused, the download stops at 50 MB or 2 minutes, and the file is
-saved in the plugin's cache folder and deleted afterwards. Reading gnome-look pages
-needs `jq` and `curl`. Nothing is sent but the request itself.
+link. It contacts the host in your link, any `https` host that link redirects to (GitHub
+release assets, for example, redirect to a CDN), and, for gnome-look pages,
+`api.opendesktop.org`. The download hosts the store API may give are limited to
+`files*.pling.com` and `dl.opendesktop.org`. Only `https` is accepted, also after
+redirects (at most 5); links with a `user@` login, spaces, or `{}[]\` characters are
+refused; each download stops at 50 MB or 2 minutes; the file is saved in the plugin's
+cache folder and deleted afterwards. Reading gnome-look pages needs `jq` and `curl`.
+Nothing is sent but the request itself (standard proxy variables are honoured).
 
 ## How it applies a cursor
 

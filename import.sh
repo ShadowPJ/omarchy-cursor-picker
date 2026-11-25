@@ -194,15 +194,16 @@ install() {
 
 
 # ---- network: fetch and resolve -------------------------------------------
-# CURSOR_PICKER_ALLOW_HTTP and CURSOR_PICKER_API_BASE exist for the tests only:
+# CURSOR_PICKER_ALLOW_HTTP and CURSOR_PICKER_API_BASE (honoured only with ALLOW_HTTP) exist for the tests only:
 # the panel never sets them, and without ALLOW_HTTP only https is accepted.
-API_BASE=${CURSOR_PICKER_API_BASE:-https://api.opendesktop.org}
+API_BASE=https://api.opendesktop.org
+[ "${CURSOR_PICKER_ALLOW_HTTP:-}" = 1 ] && API_BASE=${CURSOR_PICKER_API_BASE:-$API_BASE}
 SAFE_NAME='^[A-Za-z0-9][A-Za-z0-9._+ ()-]*$'
 
 curl_safe() {
   local proto='=https'
   [ "${CURSOR_PICKER_ALLOW_HTTP:-}" = 1 ] && proto='=http,https'
-  curl -q --silent --show-error --location --fail --proto "$proto" --proto-redir "$proto" \
+  curl -q --silent --show-error --globoff --location --fail --proto "$proto" --proto-redir "$proto" \
        --max-redirs 5 --connect-timeout 15 "$@"
 }
 
@@ -210,6 +211,7 @@ valid_url() {
   local url=$1 rest authority
   [ "${#url}" -le 2048 ] || return 1
   [[ $url =~ [[:space:][:cntrl:]] ]] && return 1
+  [[ $url == *[\{\}\[\]\\]* ]] && return 1   # no globbing, no backslashes
   if [ "${CURSOR_PICKER_ALLOW_HTTP:-}" = 1 ]; then
     [[ $url == http://* || $url == https://* ]] || return 1
     rest=${url#*://}

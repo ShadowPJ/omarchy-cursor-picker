@@ -106,7 +106,13 @@ FocusScope {
       height: parent.height
       placeholderText: strings.t("import.url.placeholder")
       Keys.onEscapePressed: view.closed()
-      onAccepted: if (text.trim() === "") view.installSelected(); else downloadButton.clicked()
+      // Handled here and accepted, so the same key does not also reach the
+      // view's own Return handler and start a second import.
+      Keys.onReturnPressed: function(event) { event.accepted = true; urlField.submit() }
+      Keys.onEnterPressed: function(event) { event.accepted = true; urlField.submit() }
+      function submit() {
+        if (text.trim() === "") view.installSelected(); else downloadButton.clicked()
+      }
     }
 
     TextButton {
