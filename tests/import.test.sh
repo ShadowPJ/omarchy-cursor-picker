@@ -173,4 +173,70 @@ check "list: an empty folder prints nothing" test -z "$(bash "$script" list "$rv
 mkdir -p "$rv/corrupt"; head -c 100 "$dl/Good.tar.gz" > "$rv/corrupt/c.tar.gz"
 check "list: a corrupt archive is skipped without failing" test -z "$(bash "$script" list "$rv/corrupt")"
 
+# ---- fetch / resolve (network code, tested against a local server) ----------
+web="$work/web"; mkdir -p "$web/ocs/v1/content/data"
+mktheme "$work/n" Net/cursors/left_ptr; bsdtar -czf "$web/Net.tar.gz" -C "$work/n" Net
+mktheme "$work/m" Win/cursors/x; bsdtar -a -cf "$web/Net-Windows.zip" -C "$work/m" Win
+head -c 60000000 /dev/zero > "$web/huge.tar.gz"
+printf 'not an archive' > "$web/page.html"
+python3 -I "$here/tests/serve.py" "$web" > "$work/port" 2>/dev/null &
+srv=$!; trap 'kill $srv 2>/dev/null; rm -rf "$work"' EXIT
+for _ in $(seq 50); do [ -s "$work/port" ] && break; sleep 0.1; done
+base="http://127.0.0.1:$(cat "$work/port")"
+net() { CURSOR_PICKER_ALLOW_HTTP=1 CURSOR_PICKER_API_BASE="$base" bash "$script" "$@"; }
+fetch() { net fetch "$1" "${2:--}" "$dest" "$cache" "${3:-skip}"; }
+fcode_is() { out=$(fetch "$@") ; [ "$out" = "error	$FCODE" ]; }
+
+fresh; out=$(fetch "$base/Net.tar.gz")
+check "fetch: downloads and installs a direct link" test "$out" = "installed	Net"
+check "fetch: the theme is in the destination" test -f "$dest/Net/cursors/left_ptr"
+check "fetch: leaves nothing in the cache" test -z "$(ls -A "$cache")"
+fresh; out=$(fetch "$base/Net.tar.gz?token=abc&x=1#frag")
+check "fetch: ignores query and fragment when naming the file" test "$out" = "installed	Net"
+out=$(fetch "$base/Net.tar.gz")
+check "fetch: second time is skipped" test "$out" = "skipped	Net"
+fresh; out=$(fetch "$base/Net.tar.gz" - replace); fresh
+check "fetch: replace mode works" test "$out" = "installed	Net"
+cp "$web/Net.tar.gz" "$web/download"
+fresh; out=$(fetch "$base/download?id=1" "Net.tar.gz")
+check "fetch: uses the given name when the URL has none" test "$out" = "installed	Net"
+FCODE=not-archive;      check "fetch: rejects a URL whose name is not an archive" fcode_is "$base/page.html"
+FCODE=download-failed;  check "fetch: a 404 is download-failed" fcode_is "$base/missing.tar.gz"
+FCODE=too-big;          check "fetch: rejects a download over 50 MB" fcode_is "$base/huge.tar.gz"
+FCODE=bad-url
+for u in "ftp://example.com/a.tar.gz" "https://user:pw@example.com/a.tar.gz" "https://example.com/a b.tar.gz" \
+         "https:///a.tar.gz" "$(printf 'https://example.com/a\n.tar.gz')" "-o/etc/x" "file:///etc/passwd" \
+         "https://example.com/$(head -c 3000 /dev/zero | tr '\0' a).tar.gz"; do
+  fresh; out=$(bash "$script" fetch "$u" - "$dest" "$cache" skip)
+  check "fetch: rejects URL ${u:0:40}" test "$out" = "error	bad-url"
+done
+fresh; out=$(bash "$script" fetch "http://127.0.0.1:1/a.tar.gz" - "$dest" "$cache" skip)
+check "fetch: plain http is rejected without the test switch" test "$out" = "error	bad-url"
+fresh; out=$(fetch "$base/Net.tar.gz" "../evil.tar.gz")
+check "fetch: a name with a slash is rejected" test "$out" = "error	bad-url"
+check "fetch: nothing was written outside the cache" test ! -e "$dest/../evil.tar.gz"
+
+# resolve: a gnome-look page → candidate archives from the (fake) OCS API
+api() { printf '%s' "$2" > "$web/ocs/v1/content/data/$1"; }
+api 111 "{\"data\":[{\"downloadname1\":\"Info\",\"downloadsize1\":\"1\",\"downloadlink1\":\"$base/page.html\",
+ \"downloadname2\":\"Net-Windows.zip\",\"downloadsize2\":\"5\",\"downloadlink2\":\"$base/Net-Windows.zip\",
+ \"downloadname3\":\"Net.tar.gz\",\"downloadsize3\":\"2\",\"downloadlink3\":\"$base/Net.tar.gz\",
+ \"downloadname4\":\"Big.tar.xz\",\"downloadsize4\":\"60000\",\"downloadlink4\":\"$base/Net.tar.gz\",
+ \"downloadname5\":\"Evil.tar.gz\",\"downloadsize5\":\"2\",\"downloadlink5\":\"https://evil.example.com/x.tar.gz\",
+ \"downloadname6\":\"../up.tar.gz\",\"downloadsize6\":\"2\",\"downloadlink6\":\"$base/Net.tar.gz\"}]}"
+api 222 '{"data":[{"downloadname1":"Readme.txt","downloadsize1":"1","downloadlink1":"x"}]}'
+api 333 'this is not json'
+res=$(net resolve "https://www.gnome-look.org/p/111/")
+check "resolve: keeps archives, drops info, big, foreign-host and odd names" test "$(printf '%s\n' "$res" | wc -l)" = 2
+check "resolve: puts the Windows archive last" test "$(printf '%s\n' "$res" | head -1 | cut -f1)" = "Net.tar.gz"
+check "resolve: prints name, size in KB and link" test "$(printf '%s\n' "$res" | head -1)" = "Net.tar.gz	2	$base/Net.tar.gz"
+check "resolve: accepts the /s/Gnome prefix and a query" test -n "$(net resolve 'https://www.pling.com/s/Gnome/p/111?x=1#y' | grep Net.tar.gz)"
+check "resolve: a page with no archives is no-download" test "$(net resolve https://www.gnome-look.org/p/222)" = "error	no-download"
+check "resolve: invalid JSON is no-download" test "$(net resolve https://www.gnome-look.org/p/333)" = "error	no-download"
+check "resolve: an unknown item is no-download" test "$(net resolve https://www.gnome-look.org/p/999)" = "error	no-download"
+for u in "https://example.com/p/111" "https://www.gnome-look.org/p/abc" "https://www.gnome-look.org/p/111/../../x" \
+         "https://gnome-look.org.evil.com/p/111" "http://www.gnome-look.org/p/111" "https://www.gnome-look.org/browse"; do
+  check "resolve: rejects $u" test "$(CURSOR_PICKER_API_BASE="$base" bash "$script" resolve "$u")" = "error	bad-url"
+done
+
 [ "$fails" -eq 0 ] && echo "all passed" || { echo "$fails failed"; exit 1; }

@@ -10,7 +10,7 @@ have installed, with a preview of each one, and apply it instantly.
 - Searchable grid; click a theme to apply it at once, no restart.
 - Size control (16–96 px).
 - Your choice is saved and re-applied each time the shell starts.
-- Imports cursor themes from archives you downloaded (see below).
+- Imports cursor themes from archives you downloaded, or straight from a pasted link (see below).
 - A bar button opens the panel; you can also bind the IPC command to a key.
 - Follows the Omarchy theme and language (English and Spanish included).
 
@@ -36,6 +36,7 @@ omarchy-shell shadowpj.cursorpicker set Adwaita  # apply a theme by id
 omarchy-shell shadowpj.cursorpicker size 32      # change the size
 omarchy-shell shadowpj.cursorpicker refresh      # rescan installed themes
 omarchy-shell shadowpj.cursorpicker importArchive ~/Downloads/Theme.tar.gz
+omarchy-shell shadowpj.cursorpicker importUrl https://www.gnome-look.org/p/1197198
 ```
 
 Bind `panel` to a key in your Hyprland config to open it quickly.
@@ -67,8 +68,31 @@ Supported: `.tar.gz`, `.tgz`, `.tar.xz`, `.tar.bz2`, `.tar.zst`, `.zip`, `.7z`
 folder first and rejected if they hold absolute or `..` paths, links that leave
 the folder, special files, more than 2000 files or more than 50 MB unpacked.
 Your original archive is never changed or deleted. Only XCursor themes are
-supported (a `cursors/` folder), not hyprcursor themes. The plugin does not use
-the network.
+supported (a `cursors/` folder), not hyprcursor themes. Importing a file from Downloads
+does not use the network.
+
+### Paste a link instead
+
+In the same Import view, paste a link and press Enter (or **Download**):
+
+- **A direct link to an archive** (`https://…/Theme.tar.gz`, a GitHub release asset…).
+- **A gnome-look page** (`https://www.gnome-look.org/p/<id>`; `pling.com` and
+  `opendesktop.org` pages work too). The plugin asks the store's API which archives the
+  page offers. With one, it installs at once; with several (colour variants, a Windows
+  `.zip`) it lists them and you pick one. From the terminal, `importUrl` takes the first
+  archive, with Windows ones last.
+
+The download goes through exactly the same checks as a file from Downloads.
+
+#### Network
+
+This is the only part of the plugin that uses the network, and only when you paste a
+link. It talks to the host in your link and, for gnome-look pages, to
+`api.opendesktop.org` plus the store's `files*.pling.com` / `dl.opendesktop.org`
+download hosts. Only `https` links are accepted (also after redirects), links with a
+`user@` login are refused, the download stops at 50 MB or 2 minutes, and the file is
+saved in the plugin's cache folder and deleted afterwards. Reading gnome-look pages
+needs `jq` and `curl`. Nothing is sent but the request itself.
 
 ## How it applies a cursor
 

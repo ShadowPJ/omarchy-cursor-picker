@@ -27,5 +27,14 @@
   "import.error.unsafe": "The archive contains unsafe files and was not installed.",
   "import.error.too-big": "The archive is too big to import safely.",
   "import.error.no-cursors": "No cursor theme was found in the archive.",
-  "import.error.failed": "The import failed."
+  "import.error.failed": "The import failed.",
+  "import.url.placeholder": "Paste a link: an archive (.tar.gz, .zip…) or a gnome-look page",
+  "import.download": "Download",
+  "import.pick": "This page has several archives. Pick one:",
+  "import.candidate": "On the page",
+  "import.error.busy": "Another import is already running.",
+  "import.error.bad-url": "That link is not valid. Use an https link.",
+  "import.error.download-failed": "The download failed. Check the link and your connection.",
+  "import.error.not-archive": "That link does not point to a supported archive.",
+  "import.error.no-download": "No cursor archive was found at that link."
 }

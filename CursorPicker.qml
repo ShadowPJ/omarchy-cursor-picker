@@ -139,8 +139,45 @@ Item {
     }
   }
 
+  // A page URL is first resolved to the archives it offers (see import.sh resolve).
+  property var candidates: []
+  property string candidatesPage: ""
+  property var lastImport: null
+
+  Process {
+    id: resolveProc
+    property string page: ""
+    property bool auto: false
+    property bool handled: false
+    property string mode: "skip"
+    // If the process never reported, do not leave the panel on "Installing…".
+    onExited: if (!resolveProc.handled) root.finishWith(resolveProc.page, "failed")
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        resolveProc.handled = true
+        var parsed = CursorModel.parseCandidates(text)
+        if (parsed.error) { root.finishWith(resolveProc.page, parsed.error); return }
+        if (parsed.candidates.length === 1 || resolveProc.auto) {
+          root.importBusy = false
+          root.downloadCandidate(parsed.candidates[0], resolveProc.mode)
+        } else {
+          root.candidates = parsed.candidates
+          root.candidatesPage = resolveProc.page
+          root.importBusy = false
+        }
+      }
+    }
+  }
+
   function clearImportResult() {
     root.importResult = { archive: "", installed: [], skipped: [], error: "" }
+    root.candidates = []
+  }
+
+  function finishWith(source, code) {
+    root.importResult = { archive: source, installed: [], skipped: [], error: code }
+    root.importBusy = false
   }
 
   function scanArchives() {
@@ -149,15 +186,72 @@ Item {
     listProc.running = true
   }
 
+  function beginImport(source) {
+    if (root.importBusy) { root.finishWith(source, "busy"); return false }
+    root.importBusy = true
+    root.candidates = []
+    root.importResult = { archive: "", installed: [], skipped: [], error: "" }
+    return true
+  }
+
   // mode "skip" keeps a theme that is already installed; "replace" overwrites it.
   function importArchive(path, mode) {
-    if (!path || root.importBusy) return false
+    if (!path) return false
+    if (!root.beginImport(String(path))) return false
+    mode = mode === "replace" ? "replace" : "skip"
+    root.lastImport = { kind: "file", path: String(path) }
+    installProc.archive = String(path)
+    installProc.command = ["bash", root.importScript, "install", String(path), root.iconsDir, root.cacheDir, mode]
+    installProc.running = true
+    return true
+  }
+
+  // Downloads and installs a pasted link: a direct archive link, or a gnome-look
+  // page (one archive installs at once; several are listed in `candidates` for the
+  // user to pick, unless `auto` is set, which takes the first one).
+  function importUrl(url, mode, auto) {
+    url = String(url || "").trim()
+    if (!url) return false
+    if (!root.beginImport(url)) return false
+    mode = mode === "replace" ? "replace" : "skip"
+    if (CursorModel.isPageUrl(url)) {
+      resolveProc.running = false
+      resolveProc.handled = false
+      resolveProc.page = url
+      resolveProc.auto = auto === true
+      resolveProc.mode = mode
+      resolveProc.command = ["bash", root.importScript, "resolve", url]
+      resolveProc.running = true
+    } else {
+      root.startFetch(url, "-", url, mode)
+    }
+    return true
+  }
+
+  function downloadCandidate(candidate, mode) {
+    if (root.importBusy) { root.finishWith(candidate.name, "busy"); return false }
+    root.importBusy = true
+    root.candidates = []
+    root.importResult = { archive: "", installed: [], skipped: [], error: "" }
+    root.startFetch(candidate.link, candidate.name, candidate.name, mode === "replace" ? "replace" : "skip")
+    return true
+  }
+
+  function startFetch(link, name, label, mode) {
+    root.lastImport = { kind: "url", link: link, name: name, label: label }
+    installProc.archive = label
+    installProc.command = ["bash", root.importScript, "fetch", link, name, root.iconsDir, root.cacheDir, mode]
+    installProc.running = true
+  }
+
+  // "Replace" after a skipped result: the same import again, overwriting.
+  function replaceLast() {
+    var last = root.lastImport
+    if (!last || root.importBusy) return false
+    if (last.kind === "file") return root.importArchive(last.path, "replace")
     root.importBusy = true
     root.importResult = { archive: "", installed: [], skipped: [], error: "" }
-    installProc.archive = String(path)
-    installProc.command = ["bash", root.importScript, "install", String(path), root.iconsDir,
-                           root.cacheDir, mode === "replace" ? "replace" : "skip"]
-    installProc.running = true
+    root.startFetch(last.link, last.name, last.label, "replace")
     return true
   }
 
@@ -219,6 +313,7 @@ Item {
   //   omarchy-shell shadowpj.cursorpicker size <px>    changes the size
   //   omarchy-shell shadowpj.cursorpicker refresh      rescans installed themes
   //   omarchy-shell shadowpj.cursorpicker importArchive <file>  installs themes from an archive
+  //   omarchy-shell shadowpj.cursorpicker importUrl <url>       downloads and installs (archive link or gnome-look page)
   ShellIpc {
     target: "shadowpj.cursorpicker"
     function panel(): void { root.togglePanel() }
@@ -226,6 +321,7 @@ Item {
     function size(px: int): void { root.setSize(px) }
     function refresh(): void { root.rescan() }
     function importArchive(path: string): void { root.importArchive(path, "skip") }
+    function importUrl(url: string): void { root.importUrl(url, "skip", true) }
   }
 
   PickerPanel {

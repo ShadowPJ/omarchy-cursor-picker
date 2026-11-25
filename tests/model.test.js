@@ -35,3 +35,21 @@ test("formatBytes", () => {
   assert.equal(M.formatBytes(4785772), "4.6 MB")
   assert.equal(M.formatBytes(-1), "0 B")
 })
+
+test("isPageUrl accepts store pages only", () => {
+  assert.equal(M.isPageUrl(" https://www.gnome-look.org/p/1197198/ "), true)
+  assert.equal(M.isPageUrl("https://www.pling.com/s/Gnome/p/12?x=1"), true)
+  assert.equal(M.isPageUrl("https://gnome-look.org.evil.com/p/1"), false)
+  assert.equal(M.isPageUrl("http://www.gnome-look.org/p/1"), false)
+  assert.equal(M.isPageUrl("https://example.com/Theme.tar.gz"), false)
+  assert.equal(M.isPageUrl(""), false)
+})
+
+test("parseCandidates", () => {
+  const r = JSON.parse(JSON.stringify(M.parseCandidates("A.tar.xz\t1662\thttps://files06.pling.com/x\nB.zip\t5\thttps://files06.pling.com/y\n")))
+  assert.deepEqual(r, { candidates: [
+    { name: "A.tar.xz", sizeKb: 1662, link: "https://files06.pling.com/x" },
+    { name: "B.zip", sizeKb: 5, link: "https://files06.pling.com/y" }], error: "" })
+  assert.equal(M.parseCandidates("error\tbad-url\n").error, "bad-url")
+  assert.equal(M.parseCandidates("").error, "no-download")
+})

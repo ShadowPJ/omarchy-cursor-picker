@@ -108,6 +108,25 @@ function parseInstallResult(text) {
   return result
 }
 
+// The same shape import.sh accepts for a gnome-look/pling page (it checks again).
+function isPageUrl(text) {
+  return /^https:\/\/(www\.)?(gnome-look\.org|pling\.com|opendesktop\.org)(\/s\/[A-Za-z0-9_-]+)?\/p\/[0-9]{1,12}\/?([?#].*)?$/.test(String(text || "").trim())
+}
+
+// Parses `import.sh resolve`: "name<TAB>sizeKB<TAB>link" lines, or "error<TAB>code".
+function parseCandidates(text) {
+  var result = { candidates: [], error: "" }
+  var lines = String(text || "").split("\n")
+  for (var i = 0; i < lines.length; i++) {
+    var parts = lines[i].split("\t")
+    if (parts.length === 2 && parts[0] === "error") result.error = parts[1]
+    else if (parts.length === 3 && parts[0] && parts[2])
+      result.candidates.push({ name: parts[0], sizeKb: Number(parts[1]) || 0, link: parts[2] })
+  }
+  if (!result.candidates.length && !result.error) result.error = "no-download"
+  return result
+}
+
 // "10 B", "222 KB", "4.6 MB": sizes as shown in the import list.
 function formatBytes(bytes) {
   var n = Number(bytes)

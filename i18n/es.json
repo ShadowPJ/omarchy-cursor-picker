@@ -27,5 +27,14 @@
   "import.error.unsafe": "El archivo contiene ficheros inseguros y no se instaló.",
   "import.error.too-big": "El archivo es demasiado grande para importarlo con seguridad.",
   "import.error.no-cursors": "No se encontró ningún tema de cursor en el archivo.",
-  "import.error.failed": "La importación falló."
+  "import.error.failed": "La importación falló.",
+  "import.url.placeholder": "Pega un enlace: un archivo (.tar.gz, .zip…) o una página de gnome-look",
+  "import.download": "Descargar",
+  "import.pick": "Esta página tiene varios archivos. Elige uno:",
+  "import.candidate": "En la página",
+  "import.error.busy": "Ya hay otra importación en curso.",
+  "import.error.bad-url": "El enlace no es válido. Usa un enlace https.",
+  "import.error.download-failed": "La descarga falló. Revisa el enlace y tu conexión.",
+  "import.error.not-archive": "El enlace no apunta a un archivo compatible.",
+  "import.error.no-download": "No se encontró ningún archivo de cursores en ese enlace."
 }
