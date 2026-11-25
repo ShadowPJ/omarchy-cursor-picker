@@ -20,6 +20,43 @@ OverlayWindow {
   property string query: ""
   readonly property var results: picker ? CursorModel.filter(picker.themes, query) : []
 
+  // Tiles: matches while searching; else the open family's variants; else families
+  // and plain themes. Every tile is {kind: "theme", theme} or {kind: "family", ...}.
+  property string openFamily: ""
+  property bool leftHanded: false
+  readonly property bool searching: query.trim() !== ""
+  readonly property var groups: picker ? CursorModel.groupThemes(picker.themes) : []
+  readonly property var openGroup: {
+    if (window.openFamily === "") return null
+    for (var i = 0; i < window.groups.length; i++)
+      if (window.groups[i].kind === "family" && window.groups[i].key === window.openFamily) return window.groups[i]
+    return null
+  }
+  readonly property bool inFamily: window.openGroup !== null && !window.searching
+  readonly property var tiles: {
+    var out = []
+    var i
+    if (window.searching) {
+      for (i = 0; i < window.results.length; i++) out.push({ kind: "theme", theme: window.results[i] })
+    } else if (window.openGroup) {
+      var variants = CursorModel.familyThemes(window.openGroup, window.leftHanded)
+      for (i = 0; i < variants.length; i++) out.push({ kind: "theme", theme: variants[i] })
+    } else {
+      out = window.groups
+    }
+    return out
+  }
+
+  function openFamilyTile(group) {
+    window.leftHanded = group.hasLeftHanded && !!window.picker && CursorModel.isLeftHandedIn(group, window.picker.current)
+    window.openFamily = group.key
+  }
+
+  function leaveFamily() {
+    window.openFamily = ""
+    Qt.callLater(function() { search.forceActiveFocus() })
+  }
+
   readonly property int pad: Style.spacing.xxl
   readonly property int cellWidth: Math.round(150 * Style.fontScale)
   readonly property int cellHeight: Math.round(120 * Style.fontScale)
@@ -29,6 +66,8 @@ OverlayWindow {
   onShownChanged: {
     if (!shown) return
     window.importOpen = false
+    window.openFamily = ""
+    window.leftHanded = false
     window.query = ""
     search.text = ""
     Qt.callLater(function() { search.forceActiveFocus() })
@@ -101,13 +140,47 @@ OverlayWindow {
       picker: window.picker
       onClosed: {
         window.importOpen = false
-        Qt.callLater(function() { search.forceActiveFocus() })
+        Qt.callLater(function() { if (window.inFamily) familyBar.forceActiveFocus(); else search.forceActiveFocus() })
+      }
+    }
+
+    FocusScope {
+      id: familyBar
+      visible: !window.importOpen && window.inFamily
+      x: window.pad
+      y: title.y + title.height + window.pad
+      width: card.width - window.pad * 2
+      height: search.height
+      Keys.onEscapePressed: window.leaveFamily()
+      onVisibleChanged: if (visible) forceActiveFocus()
+
+      TextButton {
+        id: backButton
+        height: parent.height
+        label: "← " + strings.t("panel.family.back")
+        onClicked: window.leaveFamily()
+      }
+
+      PlainLabel {
+        anchors.left: backButton.right
+        anchors.leftMargin: Style.spacing.lg
+        anchors.verticalCenter: parent.verticalCenter
+        text: window.openGroup ? window.openGroup.name : ""
+        font.bold: true
+      }
+
+      TextButton {
+        visible: !!window.openGroup && window.openGroup.hasLeftHanded
+        anchors.right: parent.right
+        height: parent.height
+        label: (window.leftHanded ? "✓ " : "") + strings.t("panel.family.leftHanded")
+        onClicked: window.leftHanded = !window.leftHanded
       }
     }
 
     TextField {
       id: search
-      visible: !window.importOpen
+      visible: !window.importOpen && !window.inFamily
       x: window.pad
       y: title.y + title.height + window.pad
       width: card.width - window.pad * 2
@@ -134,7 +207,7 @@ OverlayWindow {
       color: Style.normalFill
 
       PlainLabel {
-        visible: window.results.length === 0
+        visible: window.tiles.length === 0
         anchors.centerIn: parent
         text: strings.t("panel.none")
         opacity: 0.6
@@ -145,7 +218,7 @@ OverlayWindow {
         anchors.fill: parent
         anchors.margins: Style.spacing.sm
         clip: true
-        model: window.results
+        model: window.tiles
         boundsBehavior: Flickable.StopAtBounds
         cellWidth: Math.floor(width / Math.max(1, Math.floor(width / window.cellWidth)))
         cellHeight: window.cellHeight
@@ -153,7 +226,9 @@ OverlayWindow {
         delegate: Item {
           id: cell
           required property var modelData
-          readonly property bool active: window.picker && window.picker.current === modelData.id
+          readonly property bool isFamily: modelData.kind === "family"
+          readonly property string themeId: isFamily ? CursorModel.familyPreviewId(modelData, window.picker ? window.picker.current : "") : modelData.theme.id
+          readonly property bool active: !!window.picker && (isFamily ? CursorModel.familyHas(modelData, window.picker.current) : window.picker.current === modelData.theme.id)
 
           width: grid.cellWidth
           height: grid.cellHeight
@@ -177,7 +252,7 @@ OverlayWindow {
               Image {
                 id: preview
                 anchors.centerIn: parent
-                source: window.picker ? window.picker.previewSource(cell.modelData.id) : ""
+                source: window.picker ? window.picker.previewSource(cell.themeId) : ""
                 sourceSize: Qt.size(previewBox.width, previewBox.height)
                 width: Math.min(implicitWidth, previewBox.width)
                 height: Math.min(implicitHeight, previewBox.height)
@@ -203,8 +278,18 @@ OverlayWindow {
               anchors.top: previewBox.bottom
               anchors.topMargin: Style.spacing.md
               horizontalAlignment: Text.AlignHCenter
-              text: cell.modelData.name
+              text: cell.isFamily ? cell.modelData.name : cell.modelData.theme.name
               font.bold: cell.active
+            }
+
+            PlainLabel {
+              visible: cell.isFamily && !cell.active
+              anchors.horizontalCenter: parent.horizontalCenter
+              anchors.bottom: parent.bottom
+              anchors.bottomMargin: Style.spacing.sm
+              text: strings.tn("panel.family.count", cell.isFamily ? cell.modelData.themes.length : 0).arg(Commons.I18n.formatNumber(cell.isFamily ? cell.modelData.themes.length : 0))
+              font.pixelSize: Style.font.body * 0.85
+              opacity: 0.6
             }
 
             PlainLabel {
@@ -222,7 +307,7 @@ OverlayWindow {
               anchors.fill: parent
               hoverEnabled: true
               cursorShape: Qt.PointingHandCursor
-              onClicked: window.picker.select(cell.modelData.id)
+              onClicked: if (cell.isFamily) window.openFamilyTile(cell.modelData); else window.picker.select(cell.modelData.theme.id)
             }
           }
         }

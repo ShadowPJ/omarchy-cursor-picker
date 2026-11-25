@@ -38,5 +38,11 @@
   "import.error.not-archive": "That link does not point to a supported archive.",
   "import.error.no-download": "No cursor archive was found at that link.",
   "import.error.too-big-unpacked": "The archive unpacks to more than 1 GB, the import limit.",
-  "import.error.too-many-files": "The archive holds more than 20,000 files, the import limit."
+  "import.error.too-many-files": "The archive holds more than 20,000 files, the import limit.",
+  "panel.family.back": "Back",
+  "panel.family.leftHanded": "Left-handed",
+  "panel.family.count": {
+    "one": "%1 theme",
+    "other": "%1 themes"
+  }
 }

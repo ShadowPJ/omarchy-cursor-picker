@@ -11,6 +11,8 @@ have installed, with a preview of each one, and apply it instantly.
 - Size control (16–96 px).
 - Your choice is saved and re-applied each time the shell starts.
 - Imports cursor themes from archives you downloaded, or straight from a pasted link (see below).
+- Themes that share a name (`Bibata-Modern-Ice`, `Bibata-Original-Amber`…) are grouped into one
+  family tile; click it to see its variants, with a **Left-handed** switch for the `-Right` ones.
 - A bar button opens the panel; you can also bind the IPC command to a key.
 - Follows the Omarchy theme and language (English and Spanish included).
 

@@ -135,3 +135,68 @@ function formatBytes(bytes) {
   if (n < 1048576) return Math.round(n / 1024) + " KB"
   return (n / 1048576).toFixed(1) + " MB"
 }
+
+// ---- Theme families (see docs/superpowers/specs/2026-11-25-theme-families-design.md) ----
+
+function familyKey(id) { return String(id).split("-")[0].toLowerCase() }
+
+// A "-Right" theme is the mirrored (left-handed) twin of the theme without the suffix.
+function leftHandedIn(ids, id) {
+  var lower = String(id).toLowerCase()
+  if (!/-right$/.test(lower)) return false
+  var twin = lower.slice(0, -6)
+  for (var i = 0; i < ids.length; i++) if (String(ids[i]).toLowerCase() === twin) return true
+  return false
+}
+
+// Groups themes (already sorted by name) into tiles: a family when two or more
+// share the id's first dash-separated word, otherwise a plain theme.
+// Returns [{kind:"theme", theme} | {kind:"family", key, name, themes, hasLeftHanded}].
+function groupThemes(themes) {
+  var byKey = {}
+  var order = []
+  for (var i = 0; i < themes.length; i++) {
+    var key = familyKey(themes[i].id)
+    if (!byKey[key]) { byKey[key] = []; order.push(key) }
+    byKey[key].push(themes[i])
+  }
+  var items = []
+  for (var k = 0; k < order.length; k++) {
+    var list = byKey[order[k]]
+    if (list.length < 2) { items.push({ kind: "theme", theme: list[0] }); continue }
+    list.sort(function(a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase()) })
+    var ids = list.map(function(t) { return t.id })
+    items.push({ kind: "family", key: order[k], name: list[0].id.split("-")[0], themes: list,
+                 hasLeftHanded: ids.some(function(id) { return leftHandedIn(ids, id) }) })
+  }
+  items.sort(function(a, b) {
+    var an = (a.kind === "family" ? a.name : a.theme.name).toLowerCase()
+    var bn = (b.kind === "family" ? b.name : b.theme.name).toLowerCase()
+    return an.localeCompare(bn)
+  })
+  return items
+}
+
+function isLeftHandedIn(family, id) {
+  return leftHandedIn(family.themes.map(function(t) { return t.id }), id)
+}
+
+// The variants shown inside a family: left-handed ones or the rest, depending on the
+// toggle; a family without left-handed variants shows all of them.
+function familyThemes(family, leftHanded) {
+  if (!family.hasLeftHanded) return family.themes
+  return family.themes.filter(function(t) { return isLeftHandedIn(family, t.id) === !!leftHanded })
+}
+
+function familyHas(family, id) {
+  for (var i = 0; i < family.themes.length; i++) if (family.themes[i].id === id) return true
+  return false
+}
+
+// Which variant a family tile previews: the active one, else the first right-handed one.
+function familyPreviewId(family, currentId) {
+  if (familyHas(family, currentId)) return currentId
+  for (var i = 0; i < family.themes.length; i++)
+    if (!isLeftHandedIn(family, family.themes[i].id)) return family.themes[i].id
+  return family.themes[0].id
+}

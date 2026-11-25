@@ -38,5 +38,11 @@
   "import.error.not-archive": "El enlace no apunta a un archivo compatible.",
   "import.error.no-download": "No se encontró ningún archivo de cursores en ese enlace.",
   "import.error.too-big-unpacked": "El archivo ocupa más de 1 GB al descomprimirse, el límite de importación.",
-  "import.error.too-many-files": "El archivo contiene más de 20 000 ficheros, el límite de importación."
+  "import.error.too-many-files": "El archivo contiene más de 20 000 ficheros, el límite de importación.",
+  "panel.family.back": "Atrás",
+  "panel.family.leftHanded": "Zurdo",
+  "panel.family.count": {
+    "one": "%1 tema",
+    "other": "%1 temas"
+  }
 }

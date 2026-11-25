@@ -64,3 +64,43 @@ test("every code import.sh can print has a message in both languages", () => {
     for (const code of codes) assert.ok(strings["import.error." + code], lang + " lacks import.error." + code)
   }
 })
+
+const T = (...ids) => ids.map(id => ({ id, name: id, dir: "/x" }))
+const plain = x => JSON.parse(JSON.stringify(x))
+
+test("groupThemes makes families from shared prefixes only", () => {
+  const items = plain(M.groupThemes(T("Bibata-Modern-Ice", "Bibata-Modern-Ice-Right", "Adwaita", "Future-dark-cursors", "Bibata-Original-Ice")))
+  assert.deepEqual(items.map(i => i.kind === "family" ? "F:" + i.name + ":" + i.themes.length : "T:" + i.theme.id),
+    ["T:Adwaita", "F:Bibata:3", "T:Future-dark-cursors"])
+})
+
+test("groupThemes joins a bare name with its dashed siblings, ignoring case", () => {
+  const items = plain(M.groupThemes(T("Yaru", "yaru-blue", "Other")))
+  assert.deepEqual(items.map(i => i.kind === "family" ? "F:" + i.themes.length : "T"), ["T", "F:2"])
+})
+
+test("left-handed variants need a right-handed twin in the family", () => {
+  const f = plain(M.groupThemes(T("A-Ice", "A-Ice-Right", "A-Amber", "A-Strange-Right")))[0]
+  assert.equal(f.hasLeftHanded, true)
+  assert.deepEqual(M.familyThemes(f, false).map(t => t.id), ["A-Amber", "A-Ice", "A-Strange-Right"])
+  assert.deepEqual(M.familyThemes(f, true).map(t => t.id), ["A-Ice-Right"])
+})
+
+test("a family without left-handed variants lists everything whatever the toggle", () => {
+  const f = plain(M.groupThemes(T("B-One", "B-Two")))[0]
+  assert.equal(f.hasLeftHanded, false)
+  assert.equal(M.familyThemes(f, true).length, 2)
+})
+
+test("familyPreviewId prefers the active theme, then a right-handed variant", () => {
+  const f = plain(M.groupThemes(T("A-Ice", "A-Ice-Right", "A-Amber")))[0]
+  assert.equal(M.familyPreviewId(f, "A-Ice-Right"), "A-Ice-Right")
+  assert.equal(M.familyPreviewId(f, "Other"), "A-Amber")
+  assert.equal(M.familyHas(f, "A-Ice"), true)
+  assert.equal(M.familyHas(f, "Other"), false)
+  assert.equal(M.isLeftHandedIn(f, "A-Ice-Right"), true)
+})
+
+test("no themes, no groups", () => {
+  assert.deepEqual(plain(M.groupThemes([])), [])
+})
