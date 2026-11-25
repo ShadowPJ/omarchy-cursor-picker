@@ -3,9 +3,9 @@ const assert = require("node:assert")
 const M = require("./load-model.js")
 
 test("limits", () => {
-  assert.equal(M.MAX_ARCHIVE_BYTES, 52428800)
-  assert.equal(M.MAX_UNPACKED_BYTES, 52428800)
-  assert.equal(M.MAX_FILES, 2000)
+  assert.equal(M.MAX_ARCHIVE_BYTES, 524288000)
+  assert.equal(M.MAX_UNPACKED_BYTES, 1073741824)
+  assert.equal(M.MAX_FILES, 20000)
 })
 
 test("parseArchives keeps a valid row", () => {

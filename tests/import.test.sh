@@ -5,6 +5,8 @@ script="$here/import.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 fails=0
+# Small caps so the fixtures stay cheap; one test below runs with the real defaults.
+export CURSOR_PICKER_MAX_ARCHIVE_BYTES=52428800 CURSOR_PICKER_MAX_UNPACKED_BYTES=52428800 CURSOR_PICKER_MAX_FILES=2000
 
 ok()   { printf 'ok   %s\n' "$1"; }
 fail() { printf 'FAIL %s\n' "$1"; fails=$((fails + 1)); }
@@ -113,8 +115,8 @@ check "install: rejects a ../ entry" code_is "$hs/dotdot.tar.gz" unsafe
 check "install: rejects an absolute entry" code_is "$hs/abs.tar.gz" unsafe
 check "install: rejects a link leaving the theme" code_is "$hs/symlink.tar.gz" unsafe
 check "install: rejects a FIFO" code_is "$hs/fifo.tar.gz" unsafe
-check "install: rejects a huge unpacked size" code_is "$hs/bomb.tar.gz" too-big
-check "install: rejects too many files" code_is "$hs/many.tar.gz" too-big
+check "install: rejects a huge unpacked size" code_is "$hs/bomb.tar.gz" too-big-unpacked
+check "install: rejects too many files" code_is "$hs/many.tar.gz" too-many-files
 check "install: reports a truncated archive" code_is "$hs/truncated.tar.gz" unreadable
 check "install: rejects a root-level cursors folder" code_is "$dl/rootcursors.tar.gz" no-cursors
 check "install: rejects a bad theme folder name" code_is "$hs/badname.tar.gz" unsafe
@@ -137,7 +139,7 @@ check "install: rejects a link into a sibling theme" code_is "$rv/escape-sibling
 mkdir -p "$rv/lie/Good/cursors"
 for k in 1 2 3; do head -c 41943040 /dev/zero > "$rv/lie/Good/cursors/b$k"; done
 tar --owner='a b' --group='c d' -cJf "$rv/lie.tar.xz" -C "$rv/lie" Good
-check "install: rejects an archive whose size headers lie" code_is "$rv/lie.tar.xz" too-big
+check "install: rejects an archive whose size headers lie" code_is "$rv/lie.tar.xz" too-big-unpacked
 
 # Very deep folders create thousands of inodes from a few entries.
 deep=$(printf 'd/%.0s' $(seq 1 1900)); mkdir -p "$rv/dp/Good/cursors/$deep"; : > "$rv/dp/Good/cursors/${deep}f"
@@ -172,6 +174,13 @@ mkdir -p "$rv/empty"
 check "list: an empty folder prints nothing" test -z "$(bash "$script" list "$rv/empty")"
 mkdir -p "$rv/corrupt"; head -c 100 "$dl/Good.tar.gz" > "$rv/corrupt/c.tar.gz"
 check "list: a corrupt archive is skipped without failing" test -z "$(bash "$script" list "$rv/corrupt")"
+
+# The real defaults: a 60 MB theme (over the old 50 MB cap) now installs.
+fresh; out=$(env -u CURSOR_PICKER_MAX_ARCHIVE_BYTES -u CURSOR_PICKER_MAX_UNPACKED_BYTES -u CURSOR_PICKER_MAX_FILES \
+  bash "$script" install "$hs/bomb.tar.gz" "$dest" "$cache" skip)
+check "install: defaults accept a theme over the old 50 MB limit" test "$out" = "installed	Good"
+check "defaults: 500 MB archive, 1 GB unpacked, 20000 files" \
+  sh -c 'grep -q "MAX_ARCHIVE_BYTES:-524288000" "$1" && grep -q "MAX_UNPACKED_BYTES:-1073741824" "$1" && grep -q "MAX_FILES:-20000" "$1"' _ "$script"
 
 # ---- fetch / resolve (network code, tested against a local server) ----------
 web="$work/web"; mkdir -p "$web/ocs/v1/content/data"

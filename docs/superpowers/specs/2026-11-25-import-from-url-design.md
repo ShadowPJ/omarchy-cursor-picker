@@ -97,3 +97,12 @@ Nothing is pushed: the marketplace listing is verified at `2a42884`, and publish
 - Enter in the link field is handled and accepted there; a rejected "busy" request
   only reports and never clears the flag of the import in flight.
 - `CURSOR_PICKER_API_BASE` is honoured only together with `CURSOR_PICKER_ALLOW_HTTP`.
+
+## Limits raised (2026-11-25, owner's request)
+
+A real download hit the 50 MB cap. Caps are now: archive 500 MB, unpacked 1 GB,
+20 000 files, download time 5 minutes, overridable with `CURSOR_PICKER_MAX_*`
+environment variables (the tests use small ones). The "too big" result is split
+into `too-big` (the archive), `too-big-unpacked` and `too-many-files`, each with
+its own message. Removing the caps entirely was declined: a small archive can
+unpack to tens of GB and fill the disk.

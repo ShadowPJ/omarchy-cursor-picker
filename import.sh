@@ -16,9 +16,10 @@
 
 set -u
 
-MAX_ARCHIVE_BYTES=52428800
-MAX_UNPACKED_BYTES=52428800
-MAX_FILES=2000
+# Safety caps. Overridable through the environment (the tests use small ones).
+MAX_ARCHIVE_BYTES=${CURSOR_PICKER_MAX_ARCHIVE_BYTES:-524288000}     # 500 MB: the archive itself
+MAX_UNPACKED_BYTES=${CURSOR_PICKER_MAX_UNPACKED_BYTES:-1073741824}  # 1 GB: everything unpacked
+MAX_FILES=${CURSOR_PICKER_MAX_FILES:-20000}
 MAX_INSPECTED=30
 tmp=""        # temp folder of an install; global so the EXIT trap can see it
 fetchdir=""   # temp folder of a download, same reason
@@ -88,10 +89,13 @@ extract_bounded() {
      --no-same-owner --no-same-permissions -C "$dir" 2>/dev/null) &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
-    if [ "$(du -sb "$dir" | cut -f1)" -gt "$MAX_UNPACKED_BYTES" ] ||
-       [ "$(find "$dir" | wc -l)" -gt "$((MAX_FILES + 1))" ]; then
+    if [ "$(du -sb "$dir" | cut -f1)" -gt "$MAX_UNPACKED_BYTES" ]; then
       kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
       return 2
+    fi
+    if [ "$(find "$dir" | wc -l)" -gt "$((MAX_FILES + 1))" ]; then
+      kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
+      return 3
     fi
     sleep 0.05
   done
@@ -118,7 +122,7 @@ install() {
     [ "${#slashes}" -le "$MAX_DEPTH" ] || fail unsafe
   done <<< "$listing"
   count=$(printf '%s\n' "$listing" | grep -c .)
-  [ "$count" -le "$MAX_FILES" ] || fail too-big
+  [ "$count" -le "$MAX_FILES" ] || fail too-many-files
 
   # 2. Extract into a private temp folder; never with -P, so bsdtar refuses
   # paths that climb out and links that redirect writes. The extraction is
@@ -128,17 +132,18 @@ install() {
   trap 'rm -rf "${tmp:-}" "${fetchdir:-}"' EXIT
   tmpreal=$(realpath "$tmp")
   extract_bounded "$archive" "$tmp"; status=$?
-  [ "$status" -eq 2 ] && fail too-big
+  [ "$status" -eq 2 ] && fail too-big-unpacked
+  [ "$status" -eq 3 ] && fail too-many-files
   if [ "$status" -ne 0 ]; then
     # A file cut off at the size limit means the archive was too big, not broken.
-    [ -z "$(find "$tmp" -type f -size +$((MAX_UNPACKED_BYTES - 1))c -print -quit)" ] || fail too-big
+    [ -z "$(find "$tmp" -type f -size +$((MAX_UNPACKED_BYTES - 1))c -print -quit)" ] || fail too-big-unpacked
     fail unreadable
   fi
 
   # 3. Check what actually landed on disk.
   [ -z "$(find "$tmp" ! -type f ! -type d ! -type l -print -quit)" ] || fail unsafe
-  [ "$(du -sb "$tmp" | cut -f1)" -le "$MAX_UNPACKED_BYTES" ] || fail too-big
-  [ "$(find "$tmp" | wc -l)" -le "$((MAX_FILES + 1))" ] || fail too-big
+  [ "$(du -sb "$tmp" | cut -f1)" -le "$MAX_UNPACKED_BYTES" ] || fail too-big-unpacked
+  [ "$(find "$tmp" | wc -l)" -le "$((MAX_FILES + 1))" ] || fail too-many-files
 
   # 4. Theme folders: a "cursors" folder one or two levels down. A folder
   # inside another theme is part of it, not a second theme.
@@ -250,7 +255,7 @@ fetch() {
   file="$fetchdir/$name"
   # --max-filesize needs a Content-Length; ulimit -f stops a response without one.
   # XFSZ is ignored so the write just fails (no kill, no core dump, no crash popup).
-  (trap "" XFSZ; ulimit -f $((MAX_ARCHIVE_BYTES / 1024 + 1)); curl_safe --max-time 120 \
+  (trap "" XFSZ; ulimit -f $((MAX_ARCHIVE_BYTES / 1024 + 1)); curl_safe --max-time 300 \
      --max-filesize "$MAX_ARCHIVE_BYTES" -o "$file" -- "$url") 2>/dev/null
   status=$?
   case "$status" in

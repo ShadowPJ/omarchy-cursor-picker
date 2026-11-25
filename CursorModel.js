@@ -72,9 +72,9 @@ function filter(themes, query) {
 
 // ---- Importing themes from archives ---------------------------------------
 
-var MAX_ARCHIVE_BYTES = 52428800
-var MAX_UNPACKED_BYTES = 52428800
-var MAX_FILES = 2000
+var MAX_ARCHIVE_BYTES = 524288000
+var MAX_UNPACKED_BYTES = 1073741824
+var MAX_FILES = 20000
 
 // Parses `import.sh list`: one "path<TAB>bytes<TAB>theme1,theme2" per line.
 // Rows that are malformed, or whose themes are all invalid, are dropped.
@@ -94,7 +94,7 @@ function parseArchives(text) {
 }
 
 // Parses `import.sh install`: "installed<TAB>name", "skipped<TAB>name" and
-// "error<TAB>code" lines (codes: unreadable, unsafe, too-big, no-cursors, failed).
+// "error<TAB>code" lines (codes: unreadable, unsafe, too-big, too-big-unpacked, too-many-files, no-cursors, failed, and the download ones).
 function parseInstallResult(text) {
   var result = { installed: [], skipped: [], error: "" }
   var lines = String(text || "").split("\n")

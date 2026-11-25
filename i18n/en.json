@@ -25,7 +25,7 @@
   "import.replace": "Replace",
   "import.error.unreadable": "The archive could not be read.",
   "import.error.unsafe": "The archive contains unsafe files and was not installed.",
-  "import.error.too-big": "The archive is too big to import safely.",
+  "import.error.too-big": "The archive is bigger than 500 MB, the import limit.",
   "import.error.no-cursors": "No cursor theme was found in the archive.",
   "import.error.failed": "The import failed.",
   "import.url.placeholder": "Paste a link: an archive (.tar.gz, .zip…) or a gnome-look page",
@@ -36,5 +36,7 @@
   "import.error.bad-url": "That link is not valid. Use an https link.",
   "import.error.download-failed": "The download failed. Check the link and your connection.",
   "import.error.not-archive": "That link does not point to a supported archive.",
-  "import.error.no-download": "No cursor archive was found at that link."
+  "import.error.no-download": "No cursor archive was found at that link.",
+  "import.error.too-big-unpacked": "The archive unpacks to more than 1 GB, the import limit.",
+  "import.error.too-many-files": "The archive holds more than 20,000 files, the import limit."
 }

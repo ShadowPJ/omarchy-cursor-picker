@@ -55,7 +55,7 @@ unpack and install it:
 1. Open the panel and click **Import…** (or press `Ctrl+I` in the search box).
 2. Pick an archive from the list and press Enter or click it. The list shows
    the archives in `~/Downloads` (or `$XDG_DOWNLOAD_DIR`) that hold a cursor
-   theme: up to 50 MB, one `cursors/` folder one or two levels deep.
+   theme: up to 500 MB, one `cursors/` folder one or two levels deep.
 3. The theme is installed into `~/.icons` and appears in the grid. It is not
    applied until you pick it.
 
@@ -66,7 +66,7 @@ From a script: `omarchy-shell shadowpj.cursorpicker importArchive <archive>`.
 Supported: `.tar.gz`, `.tgz`, `.tar.xz`, `.tar.bz2`, `.tar.zst`, `.zip`, `.7z`
 (read with `bsdtar`, part of libarchive). Archives are unpacked into a temporary
 folder first and rejected if they hold absolute or `..` paths, links that leave
-the folder, special files, more than 2000 files or more than 50 MB unpacked.
+the folder, special files, more than 20 000 files or more than 1 GB unpacked.
 Your original archive is never changed or deleted. Only XCursor themes are
 supported (a `cursors/` folder), not hyprcursor themes. Importing a file from Downloads
 does not use the network.
@@ -92,7 +92,7 @@ release assets, for example, redirect to a CDN), and, for gnome-look pages,
 `api.opendesktop.org`. The download hosts the store API may give are limited to
 `files*.pling.com` and `dl.opendesktop.org`. Only `https` is accepted, also after
 redirects (at most 5); links with a `user@` login, spaces, or `{}[]\` characters are
-refused; each download stops at 50 MB or 2 minutes; the file is saved in the plugin's
+refused; each download stops at 500 MB or 5 minutes; the file is saved in the plugin's
 cache folder and deleted afterwards. Reading gnome-look pages needs `jq` and `curl`.
 Nothing is sent but the request itself (standard proxy variables are honoured).
 

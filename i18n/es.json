@@ -25,7 +25,7 @@
   "import.replace": "Reemplazar",
   "import.error.unreadable": "No se pudo leer el archivo.",
   "import.error.unsafe": "El archivo contiene ficheros inseguros y no se instaló.",
-  "import.error.too-big": "El archivo es demasiado grande para importarlo con seguridad.",
+  "import.error.too-big": "El archivo supera los 500 MB, el límite de importación.",
   "import.error.no-cursors": "No se encontró ningún tema de cursor en el archivo.",
   "import.error.failed": "La importación falló.",
   "import.url.placeholder": "Pega un enlace: un archivo (.tar.gz, .zip…) o una página de gnome-look",
@@ -36,5 +36,7 @@
   "import.error.bad-url": "El enlace no es válido. Usa un enlace https.",
   "import.error.download-failed": "La descarga falló. Revisa el enlace y tu conexión.",
   "import.error.not-archive": "El enlace no apunta a un archivo compatible.",
-  "import.error.no-download": "No se encontró ningún archivo de cursores en ese enlace."
+  "import.error.no-download": "No se encontró ningún archivo de cursores en ese enlace.",
+  "import.error.too-big-unpacked": "El archivo ocupa más de 1 GB al descomprimirse, el límite de importación.",
+  "import.error.too-many-files": "El archivo contiene más de 20 000 ficheros, el límite de importación."
 }
