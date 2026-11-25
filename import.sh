@@ -84,7 +84,7 @@ MAX_DEPTH=12   # path segments; deeper entries create folders the listing never 
 # past the size or entry limits, so a lying archive cannot fill the disk.
 extract_bounded() {
   local archive=$1 dir=$2 pid
-  (ulimit -f $((MAX_UNPACKED_BYTES / 1024)); exec bsdtar -xf "$archive" \
+  (trap "" XFSZ; ulimit -f $((MAX_UNPACKED_BYTES / 1024)); exec bsdtar -xf "$archive" \
      --no-same-owner --no-same-permissions -C "$dir" 2>/dev/null) &
   pid=$!
   while kill -0 "$pid" 2>/dev/null; do
@@ -249,7 +249,8 @@ fetch() {
   trap 'rm -rf "${tmp:-}" "${fetchdir:-}"' EXIT
   file="$fetchdir/$name"
   # --max-filesize needs a Content-Length; ulimit -f stops a response without one.
-  (ulimit -f $((MAX_ARCHIVE_BYTES / 1024 + 1)); curl_safe --max-time 120 \
+  # XFSZ is ignored so the write just fails (no kill, no core dump, no crash popup).
+  (trap "" XFSZ; ulimit -f $((MAX_ARCHIVE_BYTES / 1024 + 1)); curl_safe --max-time 120 \
      --max-filesize "$MAX_ARCHIVE_BYTES" -o "$file" -- "$url") 2>/dev/null
   status=$?
   case "$status" in
@@ -269,7 +270,7 @@ resolve() {
   id=${BASH_REMATCH[4]}
   command -v jq >/dev/null && command -v curl >/dev/null || fail no-download
 
-  json=$(ulimit -f 4096; curl_safe --max-time 30 --max-filesize 2097152 -- \
+  json=$(trap "" XFSZ; ulimit -f 4096; curl_safe --max-time 30 --max-filesize 2097152 -- \
            "$API_BASE/ocs/v1/content/data/$id?format=json" 2>/dev/null) || fail no-download
   # Up to 30 numbered download entries; tab-separated, one per line.
   json=$(printf '%s' "$json" | jq -r '
